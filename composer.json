@@ -1,0 +1,37 @@
+{
+    "name": "qwe987299/flarum-auto-ban-spam",
+    "description": "自動偵測違規關鍵字，立即無限期停權帳號、改暱稱為 Banned、清空簡介與頭像，並依照所設定的處置方式進行處理。Auto detect keywords to ban user indefinitely, reset nickname to Banned, wipe profile, and handle content according to configured strategy.",
+    "type": "flarum-extension",
+    "keywords": [
+        "flarum",
+        "ban",
+        "spam",
+        "security"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Feng, Cheng-Chi",
+            "email": "qwe987299@gmail.com"
+        }
+    ],
+    "require": {
+        "flarum/core": "^1.8 || ^2.0.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Qwe987299\\AutoBanSpam\\": "src/"
+        }
+    },
+    "extra": {
+        "flarum-extension": {
+            "title": "Auto Ban Spam Keywords",
+            "category": "security",
+            "icon": {
+                "name": "fas fa-user-slash",
+                "backgroundColor": "#e74c3c",
+                "color": "#fff"
+            }
+        }
+    }
+}

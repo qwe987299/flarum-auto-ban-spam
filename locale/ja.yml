@@ -1,0 +1,14 @@
+qwe987299-auto-ban-spam:
+  admin:
+    settings:
+      title: 違反キーワード自動BAN設定
+      keywords_label: 違反キーワードリスト
+      keywords_help: 自動BAN対象のキーワードを入力してください。改行またはカンマで複数のキーワードを区切ることができます。ニックネーム、自己紹介、スレッドのタイトル、投稿本文にキーワードが含まれている場合、アカウントは無期限に停止され、表示名が「Banned」に変更され、設定された処置方法に従って処理されます。
+      action_type_label: 違反コンテンツの処置方法
+      action_type_help: 違反検知時に、該当ユーザーの過去のスレッドや投稿をどのように処理するかを選択してください。
+      action_type_soft: ソフト削除（非表示 / 承認待ち、元のコンテンツを保持）
+      action_type_hard: ハード削除（データベースからスレッド、投稿、および FoF Upload の添付ファイルを永久削除）
+    permissions:
+      bypass_label: 除外グループ（違反キーワード自動BANのチェックを免除）
+  forum:
+    banned_notice: 違反キーワード「{keyword}」が検知されたため、アカウントは自動的に無期限停止され、関連データが消去されました。

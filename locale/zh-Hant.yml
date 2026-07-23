@@ -1,0 +1,14 @@
+qwe987299-auto-ban-spam:
+  admin:
+    settings:
+      title: 自動封鎖違規關鍵字設定
+      keywords_label: 違規關鍵字清單
+      keywords_help: 請輸入要自動封鎖的關鍵字，多個關鍵字可用換行或逗號分隔。當偵測到暱稱、簡介、發文標題或內文包含關鍵字時，將會自動無限期停權該帳號、將顯示暱稱改為「Banned」、清空個人簡介與頭像，並依照所設定的處置方式進行處理。
+      action_type_label: 使用者違規處置方式
+      action_type_help: 請選擇當偵測到違規觸發停權時，該使用者過往發佈的所有主題與留言的處理方式。
+      action_type_soft: 軟刪除（隱藏 / 等候審核，保留原本內容）
+      action_type_hard: 硬刪除（從資料庫直接永久刪除主題、留言與 FoF Upload 上傳的圖片檔案）
+    permissions:
+      bypass_label: 不受影響的群組 (豁免違規關鍵字封鎖檢測)
+  forum:
+    banned_notice: 由於檢測到違規關鍵字「{keyword}」，您的帳號已被系統自動永久封鎖並清空相關資料。
