@@ -259,15 +259,22 @@ class AutoBanService
             return;
         }
 
+        // Check registration age threshold if configured (> 0)
+        $onlyRecentDays = (int) $this->settings->get('auto_ban_spam.only_recent_days', 0);
+        if ($onlyRecentDays > 0 && $user->joined_at) {
+            if ($user->joined_at->lt(Carbon::now()->subDays($onlyRecentDays))) {
+                // User registered longer ago than threshold, skip keyword detection
+                return;
+            }
+        }
+
         foreach ($textsToCheck as $text) {
             $matched = $this->detectKeyword($text);
             if ($matched !== null) {
                 $this->banAndCleanUser($user, $actor);
 
                 throw new ValidationException([
-                    'auto_ban' => $this->translator->trans('qwe987299-auto-ban-spam.forum.banned_notice', [
-                        '{keyword}' => $matched
-                    ])
+                    'auto_ban' => $this->translator->trans('qwe987299-auto-ban-spam.forum.banned_notice')
                 ]);
             }
         }

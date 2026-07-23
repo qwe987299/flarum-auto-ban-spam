@@ -15,7 +15,8 @@ return [
 
     (new Extend\Settings())
         ->serializeToForum('autoBanKeywords', 'auto_ban_spam.keywords')
-        ->serializeToForum('autoBanActionType', 'auto_ban_spam.action_type'),
+        ->serializeToForum('autoBanActionType', 'auto_ban_spam.action_type')
+        ->serializeToForum('autoBanOnlyRecentDays', 'auto_ban_spam.only_recent_days'),
 
     (new Extend\Event())
         ->listen(UserSaving::class, Listener\CheckUserSaving::class)

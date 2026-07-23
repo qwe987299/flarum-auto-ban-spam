@@ -8,7 +8,9 @@ qwe987299-auto-ban-spam:
       action_type_help: 違反検知時に、該当ユーザーの過去のスレッドや投稿をどのように処理するかを選択してください。
       action_type_soft: ソフト削除（非表示 / 承認待ち、元のコンテンツを保持）
       action_type_hard: ハード削除（データベースからスレッド、投稿、および FoF Upload の添付ファイルを永久削除）
+      only_recent_days_label: 対象アカウントの登録後経過日数
+      only_recent_days_help: 日数を数字で入力してください（例: 30と入力すると、登録から30日以内の新規会員のみがキーワード検知の対象となります）。0を入力すると制限なし（全会員に適用）になります。
     permissions:
       bypass_label: 除外グループ（違反キーワード自動BANのチェックを免除）
   forum:
-    banned_notice: 違反キーワード「{keyword}」が検知されたため、アカウントは自動的に無期限停止され、関連データが消去されました。
+    banned_notice: 違反コンテンツが検出されたため、アカウントは停止されました。

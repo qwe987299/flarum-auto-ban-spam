@@ -20,6 +20,14 @@ app.initializers.add('qwe987299-auto-ban-spam', () => {
       },
       default: 'soft',
     })
+    .registerSetting({
+      setting: 'auto_ban_spam.only_recent_days',
+      label: app.translator.trans('qwe987299-auto-ban-spam.admin.settings.only_recent_days_label'),
+      help: app.translator.trans('qwe987299-auto-ban-spam.admin.settings.only_recent_days_help'),
+      type: 'number',
+      placeholder: '0',
+      default: 0,
+    })
     .registerPermission(
       {
         icon: 'fas fa-shield-alt',

@@ -8,7 +8,9 @@ qwe987299-auto-ban-spam:
       action_type_help: 請選擇當偵測到違規觸發停權時，該使用者過往發佈的所有主題與留言的處理方式。
       action_type_soft: 軟刪除（隱藏 / 等候審核，保留原本內容）
       action_type_hard: 硬刪除（從資料庫直接永久刪除主題、留言與 FoF Upload 上傳的圖片檔案）
+      only_recent_days_label: 僅檢測註冊 X 天內的帳號
+      only_recent_days_help: 請輸入天數數字（例如輸入 30 代表關鍵字檢測僅適用於註冊 30 天內的會員）。填寫 0 代表不限制天數（適用於所有會員）。
     permissions:
       bypass_label: 不受影響的群組 (豁免違規關鍵字封鎖檢測)
   forum:
-    banned_notice: 由於檢測到違規關鍵字「{keyword}」，您的帳號已被系統自動永久封鎖並清空相關資料。
+    banned_notice: 您的帳號因發佈違規內容已被系統自動停權與處理。
