@@ -10,6 +10,7 @@ use Flarum\Notification\Notification;
 use Flarum\Post\Post;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Flarum\User\User;
+use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -76,7 +77,7 @@ class AutoBanService
     }
 
     /**
-     * Ban user indefinitely, revoke tokens, change nickname to "Banned", wipe profile and clean content/relations
+     * Ban user indefinitely, revoke tokens, change nickname to "Banned", physically delete avatar file, wipe profile and clean content/relations
      */
     public function banAndCleanUser(User $user, ?User $actor = null): void
     {
@@ -90,8 +91,22 @@ class AutoBanService
         // 2. Change Nickname to "Banned"
         $user->nickname = 'Banned';
 
-        // 3. Clear Avatar, Bio (fof/user-bio) & Social Buttons (fof/socialprofile)
+        // 3. Physically delete avatar file from server storage disk and clear profile fields
+        $avatarPath = $user->getRawOriginal('avatar_url') ?? $user->avatar_url;
+        if (!empty($avatarPath)) {
+            try {
+                /** @var FilesystemFactory $filesystemFactory */
+                $filesystemFactory = resolve(FilesystemFactory::class);
+                $disk = $filesystemFactory->disk('flarum-avatars');
+                if ($disk->exists($avatarPath)) {
+                    $disk->delete($avatarPath);
+                }
+            } catch (Throwable $e) {
+                // Proceed if avatar disk file deletion encounters exception
+            }
+        }
         $user->avatar_url = null;
+
         if (isset($user->bio)) {
             $user->bio = '';
         }
