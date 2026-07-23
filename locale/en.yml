@@ -3,7 +3,7 @@ qwe987299-auto-ban-spam:
     settings:
       title: Auto Ban Spam Keywords Settings
       keywords_label: Banned Keywords List
-      keywords_help: Enter keywords to automatically ban users for. Separate multiple keywords with newlines or commas. When detected in nickname, bio, discussion title, or post content, the account will be permanently suspended, nickname changed to "Banned", profile wiped, and processed according to the configured action strategy.
+      keywords_help: Enter keywords to automatically ban users for. Separate multiple keywords with newlines or commas (,). When detected in nickname, bio, discussion title, or post content, the account will be permanently suspended, nickname changed to "Banned", profile wiped, and processed according to the configured action strategy.
       action_type_label: User Violation Action Strategy
       action_type_help: Choose how past discussions, posts, and uploaded files created by the banned user should be handled.
       action_type_soft: Soft Delete (Hide / Send to approval queue, keep original content)

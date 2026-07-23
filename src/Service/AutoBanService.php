@@ -37,8 +37,8 @@ class AutoBanService
             return [];
         }
 
-        // Split by newlines or commas
-        $lines = preg_split('/[\r\n,]+/', $raw);
+        // Split by newlines, half-width commas (,) or full-width commas (，)
+        $lines = preg_split('/[\r\n,，]+/u', $raw);
         $keywords = [];
 
         foreach ($lines as $line) {
