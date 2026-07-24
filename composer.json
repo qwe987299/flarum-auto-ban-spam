@@ -8,11 +8,17 @@
         "spam",
         "security"
     ],
+    "homepage": "https://mnya.tw/dv/work/045.html",
+    "support": {
+        "issues": "https://github.com/qwe987299/flarum-auto-ban-spam/issues",
+        "source": "https://github.com/qwe987299/flarum-auto-ban-spam"
+    },
     "license": "MIT",
     "authors": [
         {
             "name": "Feng, Cheng-Chi",
-            "email": "qwe987299@gmail.com"
+            "email": "qwe987299@gmail.com",
+            "homepage": "https://mnya.tw/"
         }
     ],
     "require": {
