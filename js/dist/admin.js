@@ -35,6 +35,11 @@
               icon: "fas fa-shield-alt",
               label: app.translator.trans("qwe987299-auto-ban-spam.admin.permissions.bypass_label"),
               permission: "autoBanSpam.bypass"
+            }, "moderate")
+            .registerPermission({
+              icon: "fas fa-user-slash",
+              label: app.translator.trans("qwe987299-auto-ban-spam.admin.permissions.manual_ban_label"),
+              permission: "autoBanSpam.manualBan"
             }, "moderate");
 
           app.extensionData.for("qwe987299-flarum-auto-ban-spam")
@@ -67,6 +72,11 @@
               icon: "fas fa-shield-alt",
               label: app.translator.trans("qwe987299-auto-ban-spam.admin.permissions.bypass_label"),
               permission: "autoBanSpam.bypass"
+            }, "moderate")
+            .registerPermission({
+              icon: "fas fa-user-slash",
+              label: app.translator.trans("qwe987299-auto-ban-spam.admin.permissions.manual_ban_label"),
+              permission: "autoBanSpam.manualBan"
             }, "moderate");
         }
       });

@@ -12,5 +12,14 @@ qwe987299-auto-ban-spam:
       only_recent_days_help: 日数を数字で入力してください（例: 30と入力すると、登録から30日以内の新規会員のみがキーワード検知の対象となります）。0を入力すると制限なし（全会員に適用）になります。
     permissions:
       bypass_label: 除外グループ（違反キーワード自動BANのチェックを免除）
+      manual_ban_label: 手動無期限BAN実行
   forum:
     banned_notice: 違反コンテンツが検出されたため、アカウントは停止されました。
+    user_controls:
+      manual_ban_button: 無期限BAN
+    modal:
+      title: 無期限BANの確認
+      body: ユーザー「{username}」に対して無期限BANおよびプロファイル削除を実行してもよろしいですか？過去の投稿や添付ファイルは設定された違反コンテンツ処置方法に従って処理されます。
+      confirm_button: 実行する
+      cancel_button: キャンセル
+      success_message: 無期限BANおよびデータクリーンアップが正常に完了しました。

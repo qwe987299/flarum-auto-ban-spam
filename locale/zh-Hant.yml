@@ -12,5 +12,14 @@ qwe987299-auto-ban-spam:
       only_recent_days_help: 請輸入天數數字（例如輸入 30 代表關鍵字檢測僅適用於註冊 30 天內的會員）。填寫 0 代表不限制天數（適用於所有會員）。
     permissions:
       bypass_label: 不受影響的群組 (豁免違規關鍵字封鎖檢測)
+      manual_ban_label: 手動執行無限期停權
   forum:
     banned_notice: 您的帳號因發佈違規內容已被系統自動停權與處理。
+    user_controls:
+      manual_ban_button: 無限期停權
+    modal:
+      title: 確認無限期停權
+      body: 確定要對使用者「{username}」執行無限期停權與資料清理嗎？此操作將會依照系統設定之「使用者違規處置方式」處理其過去發佈的所有內容與上傳檔案。
+      confirm_button: 確定執行
+      cancel_button: 取消
+      success_message: 已成功對該使用者執行無限期停權與資料清理。

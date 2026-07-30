@@ -77,11 +77,16 @@ class AutoBanService
     }
 
     /**
-     * Ban user indefinitely, revoke tokens, change nickname to "Banned", physically delete avatar file, wipe profile and clean content/relations
+     * Ban user indefinitely, revoke tokens, change nickname to "Banned", physically delete avatar and profile cover files, wipe profile and clean content/relations
      */
     public function banAndCleanUser(User $user, ?User $actor = null): void
     {
-        if (!$user->exists || ($user->suspended_until !== null && $user->suspended_until->isFuture())) {
+        if (!$user->exists) {
+            return;
+        }
+
+        // Return early only if already fully auto-banned (nickname is "Banned" and suspended until 2099)
+        if ($user->nickname === 'Banned' && $user->suspended_until !== null && $user->suspended_until->year >= 2099) {
             return;
         }
 
@@ -106,6 +111,27 @@ class AutoBanService
             }
         }
         $user->avatar_url = null;
+
+        // Physically delete sycho/flarum-profile-cover image & thumbnail if extension is active
+        $coverPath = isset($user->cover) ? ($user->getRawOriginal('cover') ?? $user->cover) : null;
+        if (!empty($coverPath)) {
+            try {
+                /** @var FilesystemFactory $filesystemFactory */
+                $filesystemFactory = resolve(FilesystemFactory::class);
+                $disk = $filesystemFactory->disk('sycho-profile-cover');
+                $thumbnailPath = 'thumbnails/' . $coverPath;
+
+                if ($disk->exists($coverPath)) {
+                    $disk->delete($coverPath);
+                }
+                if ($disk->exists($thumbnailPath)) {
+                    $disk->delete($thumbnailPath);
+                }
+            } catch (Throwable $e) {
+                // Proceed if cover disk file deletion encounters exception
+            }
+            $user->cover = null;
+        }
 
         if (isset($user->bio)) {
             $user->bio = '';

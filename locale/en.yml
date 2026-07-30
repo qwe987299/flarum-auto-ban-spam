@@ -12,5 +12,14 @@ qwe987299-auto-ban-spam:
       only_recent_days_help: Enter number of days (e.g. 30 means keyword detection only applies to accounts registered within the last 30 days). Set to 0 to disable (applies to all members).
     permissions:
       bypass_label: Ignored Groups (Bypass keyword auto-ban check)
+      manual_ban_label: Manually trigger indefinite ban & cleanup
   forum:
     banned_notice: Your account has been suspended due to restricted content.
+    user_controls:
+      manual_ban_button: Indefinite Ban
+    modal:
+      title: Confirm Indefinite Ban
+      body: Are you sure you want to trigger indefinite ban and profile cleanup for "{username}"? All past content and uploaded files will be handled according to the configured User Violation Action Strategy.
+      confirm_button: Confirm Ban
+      cancel_button: Cancel
+      success_message: Indefinite ban and cleanup executed successfully.

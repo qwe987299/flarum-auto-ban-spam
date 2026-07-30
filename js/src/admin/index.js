@@ -35,5 +35,13 @@ app.initializers.add('qwe987299-auto-ban-spam', () => {
         permission: 'autoBanSpam.bypass',
       },
       'moderate'
+    )
+    .registerPermission(
+      {
+        icon: 'fas fa-user-slash',
+        label: app.translator.trans('qwe987299-auto-ban-spam.admin.permissions.manual_ban_label'),
+        permission: 'autoBanSpam.manualBan',
+      },
+      'moderate'
     );
 });
