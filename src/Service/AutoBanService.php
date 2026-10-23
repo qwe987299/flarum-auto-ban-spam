@@ -4,6 +4,7 @@ namespace Qwe987299\AutoBanSpam\Service;
 
 use Carbon\Carbon;
 use Flarum\Discussion\Discussion;
+use Flarum\Foundation\Paths;
 use Flarum\Foundation\ValidationException;
 use Flarum\Http\AccessToken;
 use Flarum\Notification\Notification;
@@ -20,11 +21,67 @@ class AutoBanService
 {
     protected SettingsRepositoryInterface $settings;
     protected Translator $translator;
+    protected ?FilesystemFactory $filesystemFactory;
+    protected ?Paths $paths;
 
-    public function __construct(SettingsRepositoryInterface $settings, Translator $translator)
-    {
+    public function __construct(
+        SettingsRepositoryInterface $settings,
+        Translator $translator,
+        ?FilesystemFactory $filesystemFactory = null,
+        ?Paths $paths = null
+    ) {
         $this->settings = $settings;
         $this->translator = $translator;
+        $this->filesystemFactory = $filesystemFactory;
+        $this->paths = $paths;
+    }
+
+    /**
+     * Get FilesystemFactory instance safely across Flarum 1.x and 2.0
+     */
+    protected function getFilesystemFactory(): ?FilesystemFactory
+    {
+        if ($this->filesystemFactory !== null) {
+            return $this->filesystemFactory;
+        }
+
+        if (function_exists('resolve')) {
+            try {
+                return resolve(FilesystemFactory::class);
+            } catch (Throwable $e) {}
+        }
+
+        if (class_exists(\Illuminate\Container\Container::class)) {
+            try {
+                return \Illuminate\Container\Container::getInstance()->make(FilesystemFactory::class);
+            } catch (Throwable $e) {}
+        }
+
+        return null;
+    }
+
+    /**
+     * Get Paths instance safely across Flarum 1.x and 2.0
+     */
+    protected function getPaths(): ?Paths
+    {
+        if ($this->paths !== null) {
+            return $this->paths;
+        }
+
+        if (function_exists('resolve') && class_exists(Paths::class)) {
+            try {
+                return resolve(Paths::class);
+            } catch (Throwable $e) {}
+        }
+
+        if (class_exists(\Illuminate\Container\Container::class) && class_exists(Paths::class)) {
+            try {
+                return \Illuminate\Container\Container::getInstance()->make(Paths::class);
+            } catch (Throwable $e) {}
+        }
+
+        return null;
     }
 
     /**
@@ -85,8 +142,8 @@ class AutoBanService
             return;
         }
 
-        // Return early only if already fully auto-banned (nickname is "Banned" and suspended until 2099)
-        if ($user->nickname === 'Banned' && $user->suspended_until !== null && $user->suspended_until->year >= 2099) {
+        // Return early only if already fully auto-banned and no explicit actor action is requesting cleanup
+        if ($actor === null && $user->nickname === 'Banned' && $user->suspended_until !== null && $user->suspended_until->year >= 2099) {
             return;
         }
 
@@ -96,42 +153,9 @@ class AutoBanService
         // 2. Change Nickname to "Banned"
         $user->nickname = 'Banned';
 
-        // 3. Physically delete avatar file from server storage disk and clear profile fields
-        $avatarPath = $user->getRawOriginal('avatar_url') ?? $user->avatar_url;
-        if (!empty($avatarPath)) {
-            try {
-                /** @var FilesystemFactory $filesystemFactory */
-                $filesystemFactory = resolve(FilesystemFactory::class);
-                $disk = $filesystemFactory->disk('flarum-avatars');
-                if ($disk->exists($avatarPath)) {
-                    $disk->delete($avatarPath);
-                }
-            } catch (Throwable $e) {
-                // Proceed if avatar disk file deletion encounters exception
-            }
-        }
-        $user->avatar_url = null;
-
-        // Physically delete sycho/flarum-profile-cover image & thumbnail if extension is active
-        $coverPath = isset($user->cover) ? ($user->getRawOriginal('cover') ?? $user->cover) : null;
-        if (!empty($coverPath)) {
-            try {
-                /** @var FilesystemFactory $filesystemFactory */
-                $filesystemFactory = resolve(FilesystemFactory::class);
-                $disk = $filesystemFactory->disk('sycho-profile-cover');
-                $thumbnailPath = 'thumbnails/' . $coverPath;
-
-                if ($disk->exists($coverPath)) {
-                    $disk->delete($coverPath);
-                }
-                if ($disk->exists($thumbnailPath)) {
-                    $disk->delete($thumbnailPath);
-                }
-            } catch (Throwable $e) {
-                // Proceed if cover disk file deletion encounters exception
-            }
-            $user->cover = null;
-        }
+        // 3. Physically delete avatar file and profile cover from server storage disk and clear profile fields
+        $this->deleteUserAvatar($user);
+        $this->deleteUserCover($user);
 
         if (isset($user->bio)) {
             $user->bio = '';
@@ -199,27 +223,8 @@ class AutoBanService
             Discussion::where('user_id', $user->id)->delete();
             Post::where('user_id', $user->id)->delete();
 
-            // Hard delete: Delete all FoF Upload files if extension is active
-            if (class_exists(\FoF\Upload\File::class)) {
-                try {
-                    /** @var \FoF\Upload\Adapters\Manager $manager */
-                    $manager = resolve(\FoF\Upload\Adapters\Manager::class);
-
-                    \FoF\Upload\File::where('actor_id', $user->id)->each(function (\FoF\Upload\File $file) use ($manager) {
-                        try {
-                            $adapter = $manager->instantiate($file->upload_method);
-                            if ($adapter) {
-                                $adapter->delete($file);
-                            }
-                        } catch (Throwable $e) {
-                            // Proceed to delete DB record even if adapter deletion fails
-                        }
-                        $file->delete();
-                    });
-                } catch (Throwable $e) {
-                    \FoF\Upload\File::where('actor_id', $user->id)->delete();
-                }
-            }
+            // Hard delete: Delete all FoF Upload files including thumbnails across Flarum 1.x and 2.0
+            $this->deleteUserUploadFiles($user->id);
 
             // Refresh last post & stats for remaining affected discussions created by other users
             if (!empty($affectedDiscussionIds)) {
@@ -273,6 +278,272 @@ class AutoBanService
         $user->refreshDiscussionCount();
         $user->refreshCommentCount();
         $user->save();
+    }
+
+    /**
+     * Physically delete user avatar, including Flarum 2.0 HiDPI variants (@2x, @3x)
+     */
+    protected function deleteUserAvatar(User $user): void
+    {
+        $avatarPath = $user->getRawOriginal('avatar_url') ?? $user->avatar_url;
+
+        if (!empty($avatarPath)) {
+            // If accessor returned a full URL, extract the relative base filename
+            if (str_contains($avatarPath, '://')) {
+                $parsed = parse_url($avatarPath, PHP_URL_PATH);
+                if ($parsed) {
+                    $avatarPath = basename($parsed);
+                }
+            }
+
+            // 1. Flarum 2.0 AvatarUploader::deleteAllVariants
+            if (class_exists(\Flarum\User\AvatarUploader::class)) {
+                try {
+                    $uploader = function_exists('resolve')
+                        ? resolve(\Flarum\User\AvatarUploader::class)
+                        : \Illuminate\Container\Container::getInstance()->make(\Flarum\User\AvatarUploader::class);
+
+                    if (method_exists($uploader, 'deleteAllVariants')) {
+                        $uploader->deleteAllVariants($avatarPath);
+                    }
+                } catch (Throwable $e) {}
+            }
+
+            // 2. Direct filesystem disk deletion for base avatar and 2.0 HiDPI variants (@2x, @3x)
+            try {
+                $filesystemFactory = $this->getFilesystemFactory();
+                if ($filesystemFactory) {
+                    $disk = $filesystemFactory->disk('flarum-avatars');
+
+                    if ($disk->exists($avatarPath)) {
+                        $disk->delete($avatarPath);
+                    }
+
+                    // Delete Flarum 2.0 variant paths (e.g. abc@2x.webp, abc@3x.webp)
+                    $dot = strrpos($avatarPath, '.');
+                    $base = $dot !== false ? substr($avatarPath, 0, $dot) : $avatarPath;
+                    $ext = $dot !== false ? substr($avatarPath, $dot) : '';
+
+                    foreach (['@2x', '@3x'] as $suffix) {
+                        $variant = $base . $suffix . $ext;
+                        if ($disk->exists($variant)) {
+                            $disk->delete($variant);
+                        }
+                    }
+                }
+            } catch (Throwable $e) {}
+
+            // 3. Fallback direct physical disk deletion in public/assets/avatars
+            try {
+                $paths = $this->getPaths();
+                $publicPath = $paths ? $paths->public : (defined('FLARUM_PUBLIC_DIR') ? FLARUM_PUBLIC_DIR : null);
+
+                if ($publicPath) {
+                    $avatarDir = rtrim($publicPath, '/\\') . DIRECTORY_SEPARATOR . 'assets' . DIRECTORY_SEPARATOR . 'avatars' . DIRECTORY_SEPARATOR;
+
+                    if (file_exists($avatarDir . $avatarPath)) {
+                        @unlink($avatarDir . $avatarPath);
+                    }
+
+                    $dot = strrpos($avatarPath, '.');
+                    $base = $dot !== false ? substr($avatarPath, 0, $dot) : $avatarPath;
+                    $ext = $dot !== false ? substr($avatarPath, $dot) : '';
+
+                    foreach (['@2x', '@3x'] as $suffix) {
+                        $variantFile = $avatarDir . $base . $suffix . $ext;
+                        if (file_exists($variantFile)) {
+                            @unlink($variantFile);
+                        }
+                    }
+                }
+            } catch (Throwable $e) {}
+        }
+
+        $user->avatar_url = null;
+        if (isset($user->has_avatar_2x) || array_key_exists('has_avatar_2x', $user->getAttributes())) {
+            $user->has_avatar_2x = false;
+        }
+        if (isset($user->has_avatar_3x) || array_key_exists('has_avatar_3x', $user->getAttributes())) {
+            $user->has_avatar_3x = false;
+        }
+    }
+
+    /**
+     * Physically delete sycho/flarum-profile-cover image & thumbnail
+     */
+    protected function deleteUserCover(User $user): void
+    {
+        $coverPath = isset($user->cover) ? ($user->getRawOriginal('cover') ?? $user->cover) : null;
+        if (!empty($coverPath)) {
+            if (str_contains($coverPath, '://')) {
+                $parsed = parse_url($coverPath, PHP_URL_PATH);
+                if ($parsed) {
+                    $coverPath = basename($parsed);
+                }
+            }
+
+            try {
+                $filesystemFactory = $this->getFilesystemFactory();
+                if ($filesystemFactory) {
+                    $disk = $filesystemFactory->disk('sycho-profile-cover');
+                    $thumbnailPath = 'thumbnails/' . $coverPath;
+
+                    if ($disk->exists($coverPath)) {
+                        $disk->delete($coverPath);
+                    }
+                    if ($disk->exists($thumbnailPath)) {
+                        $disk->delete($thumbnailPath);
+                    }
+                }
+            } catch (Throwable $e) {}
+
+            try {
+                $paths = $this->getPaths();
+                $publicPath = $paths ? $paths->public : null;
+                if ($publicPath) {
+                    $coverDir = rtrim($publicPath, '/\\') . DIRECTORY_SEPARATOR . 'assets' . DIRECTORY_SEPARATOR . 'covers' . DIRECTORY_SEPARATOR;
+                    if (file_exists($coverDir . $coverPath)) {
+                        @unlink($coverDir . $coverPath);
+                    }
+                    if (file_exists($coverDir . 'thumbnails' . DIRECTORY_SEPARATOR . $coverPath)) {
+                        @unlink($coverDir . 'thumbnails' . DIRECTORY_SEPARATOR . $coverPath);
+                    }
+                }
+            } catch (Throwable $e) {}
+
+            $user->cover = null;
+        }
+    }
+
+    /**
+     * Physically delete all FoF Upload files including thumbnails across Flarum 1.x and 2.0
+     */
+    protected function deleteUserUploadFiles(int $userId): void
+    {
+        if (!class_exists(\FoF\Upload\File::class)) {
+            return;
+        }
+
+        try {
+            $files = \FoF\Upload\File::where('actor_id', $userId)->get();
+
+            /** @var \FoF\Upload\Repositories\FileRepository|null $fileRepo */
+            $fileRepo = null;
+            if (class_exists(\FoF\Upload\Repositories\FileRepository::class)) {
+                try {
+                    $fileRepo = function_exists('resolve')
+                        ? resolve(\FoF\Upload\Repositories\FileRepository::class)
+                        : \Illuminate\Container\Container::getInstance()->make(\FoF\Upload\Repositories\FileRepository::class);
+                } catch (Throwable $e) {}
+            }
+
+            /** @var \FoF\Upload\Helpers\Util|null $util */
+            $util = null;
+            if (class_exists(\FoF\Upload\Helpers\Util::class)) {
+                try {
+                    $util = function_exists('resolve')
+                        ? resolve(\FoF\Upload\Helpers\Util::class)
+                        : \Illuminate\Container\Container::getInstance()->make(\FoF\Upload\Helpers\Util::class);
+                } catch (Throwable $e) {}
+            }
+
+            /** @var \FoF\Upload\Adapters\Manager|null $manager */
+            $manager = null;
+            if (class_exists(\FoF\Upload\Adapters\Manager::class)) {
+                try {
+                    $manager = function_exists('resolve')
+                        ? resolve(\FoF\Upload\Adapters\Manager::class)
+                        : \Illuminate\Container\Container::getInstance()->make(\FoF\Upload\Adapters\Manager::class);
+                } catch (Throwable $e) {}
+            }
+
+            $filesystemFactory = $this->getFilesystemFactory();
+            $paths = $this->getPaths();
+            $publicPath = $paths ? $paths->public : null;
+            $filesBaseDir = $publicPath
+                ? rtrim($publicPath, '/\\') . DIRECTORY_SEPARATOR . 'assets' . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR
+                : null;
+
+            foreach ($files as $file) {
+                try {
+                    // Check if file is private-shared
+                    $isPrivateShared = false;
+                    if ($util && method_exists($util, 'isPrivateShared')) {
+                        try {
+                            $isPrivateShared = $util->isPrivateShared($file);
+                        } catch (Throwable $e) {}
+                    }
+
+                    if ($isPrivateShared && $filesystemFactory) {
+                        try {
+                            $sharedDisk = $filesystemFactory->disk('private-shared');
+                            if (!empty($file->path) && $sharedDisk->exists($file->path)) {
+                                $sharedDisk->delete($file->path);
+                            }
+                            if (!empty($file->thumbnail_path) && $sharedDisk->exists($file->thumbnail_path)) {
+                                $sharedDisk->delete($file->thumbnail_path);
+                            }
+                        } catch (Throwable $e) {}
+                    } else {
+                        // Resolve adapter
+                        $adapter = null;
+                        if ($util && method_exists($util, 'getStorageAdapterForFile')) {
+                            try {
+                                $adapter = $util->getStorageAdapterForFile($file);
+                            } catch (Throwable $e) {}
+                        }
+                        if (!$adapter && $manager && !empty($file->upload_method)) {
+                            try {
+                                $adapter = $manager->instantiate($file->upload_method);
+                            } catch (Throwable $e) {}
+                        }
+
+                        // Use FileRepository::deleteFromStorage if available (safely deletes main + thumbnail)
+                        $deletedViaRepo = false;
+                        if ($fileRepo && $adapter && method_exists($fileRepo, 'deleteFromStorage')) {
+                            try {
+                                $deletedViaRepo = $fileRepo->deleteFromStorage($file, $adapter);
+                            } catch (Throwable $e) {}
+                        }
+
+                        if (!$deletedViaRepo && $adapter) {
+                            // Delete thumbnail first if present
+                            if (!empty($file->thumbnail_path)) {
+                                try {
+                                    $thumbClone = clone $file;
+                                    $thumbClone->path = $file->thumbnail_path;
+                                    $adapter->delete($thumbClone);
+                                } catch (Throwable $e) {}
+                            }
+
+                            // Delete main file
+                            try {
+                                $adapter->delete($file);
+                            } catch (Throwable $e) {}
+                        }
+                    }
+
+                    // Fallback physical disk unlink for local files directory
+                    if ($filesBaseDir) {
+                        if (!empty($file->path) && file_exists($filesBaseDir . $file->path)) {
+                            @unlink($filesBaseDir . $file->path);
+                        }
+                        if (!empty($file->thumbnail_path) && file_exists($filesBaseDir . $file->thumbnail_path)) {
+                            @unlink($filesBaseDir . $file->thumbnail_path);
+                        }
+                    }
+                } catch (Throwable $e) {}
+
+                // Delete file database record
+                try {
+                    $file->delete();
+                } catch (Throwable $e) {}
+            }
+        } catch (Throwable $e) {
+            try {
+                \FoF\Upload\File::where('actor_id', $userId)->delete();
+            } catch (Throwable $e2) {}
+        }
     }
 
     /**

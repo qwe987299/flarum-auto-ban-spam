@@ -1,15 +1,15 @@
 import app from 'flarum/admin/app';
+import Extend from 'flarum/common/extenders';
 
-app.initializers.add('qwe987299-auto-ban-spam', () => {
-  app.extensionData
-    .for('qwe987299-auto-ban-spam')
-    .registerSetting({
+export default [
+  new Extend.Admin()
+    .setting(() => ({
       setting: 'auto_ban_spam.keywords',
       label: app.translator.trans('qwe987299-auto-ban-spam.admin.settings.keywords_label'),
       help: app.translator.trans('qwe987299-auto-ban-spam.admin.settings.keywords_help'),
       type: 'textarea',
-    })
-    .registerSetting({
+    }))
+    .setting(() => ({
       setting: 'auto_ban_spam.action_type',
       label: app.translator.trans('qwe987299-auto-ban-spam.admin.settings.action_type_label'),
       help: app.translator.trans('qwe987299-auto-ban-spam.admin.settings.action_type_help'),
@@ -19,29 +19,31 @@ app.initializers.add('qwe987299-auto-ban-spam', () => {
         hard: app.translator.trans('qwe987299-auto-ban-spam.admin.settings.action_type_hard'),
       },
       default: 'soft',
-    })
-    .registerSetting({
+    }))
+    .setting(() => ({
       setting: 'auto_ban_spam.only_recent_days',
       label: app.translator.trans('qwe987299-auto-ban-spam.admin.settings.only_recent_days_label'),
       help: app.translator.trans('qwe987299-auto-ban-spam.admin.settings.only_recent_days_help'),
       type: 'number',
       placeholder: '0',
       default: 0,
-    })
-    .registerPermission(
-      {
+    }))
+    .permission(
+      () => ({
         icon: 'fas fa-shield-alt',
         label: app.translator.trans('qwe987299-auto-ban-spam.admin.permissions.bypass_label'),
         permission: 'autoBanSpam.bypass',
-      },
+      }),
       'moderate'
     )
-    .registerPermission(
-      {
+    .permission(
+      () => ({
         icon: 'fas fa-user-slash',
         label: app.translator.trans('qwe987299-auto-ban-spam.admin.permissions.manual_ban_label'),
         permission: 'autoBanSpam.manualBan',
-      },
+      }),
       'moderate'
-    );
-});
+    ),
+];
+
+export { default as extend } from './index';

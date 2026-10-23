@@ -1,11 +1,29 @@
 (() => {
   "use strict";
-  if (typeof flarum !== "undefined" && flarum.core && flarum.core.compat) {
-    const app = flarum.core.compat["forum/app"];
-    const extend = flarum.core.compat["common/extend"].extend;
-    const UserControls = flarum.core.compat["forum/utils/UserControls"];
-    const Button = flarum.core.compat["common/components/Button"];
-    const Modal = flarum.core.compat["common/components/Modal"];
+  function getModule(id) {
+    if (typeof flarum !== "undefined") {
+      if (flarum.reg && typeof flarum.reg.get === "function") {
+        try {
+          const mod = flarum.reg.get("core", id);
+          if (mod) return (mod && mod.__esModule && typeof mod.default !== "undefined") ? mod.default : mod;
+        } catch (e) {}
+      }
+      if (flarum.core && flarum.core.compat && flarum.core.compat[id]) {
+        const mod = flarum.core.compat[id];
+        return (mod && mod.__esModule && typeof mod.default !== "undefined") ? mod.default : mod;
+      }
+    }
+    return null;
+  }
+
+  const app = getModule("forum/app") || (typeof flarum !== "undefined" ? flarum.app : null) || (typeof window !== "undefined" ? window.app : null);
+  const commonExtend = getModule("common/extend");
+  const extend = commonExtend ? commonExtend.extend : null;
+  const UserControls = getModule("forum/utils/UserControls");
+  const Button = getModule("common/components/Button");
+  const Modal = getModule("common/components/Modal");
+
+  if (Modal && app && extend && UserControls && Button) {
 
     class ManualBanModal extends Modal {
       className() {
@@ -76,5 +94,10 @@
       });
     }
   }
+
+  if (typeof module !== "undefined") {
+    module.exports = {};
+  }
 })();
-module.exports = {};
+module.exports = typeof module !== "undefined" && module.exports ? module.exports : {};
+

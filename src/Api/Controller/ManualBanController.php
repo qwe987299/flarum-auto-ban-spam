@@ -24,9 +24,10 @@ class ManualBanController implements RequestHandlerInterface
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $actor = RequestUtil::getActor($request);
-        $actor->assertPermission('autoBanSpam.manualBan');
+        $actor->assertPermission($actor->hasPermission('autoBanSpam.manualBan'));
 
-        $id = Arr::get($request->getQueryParams(), 'id');
+        $id = Arr::get((array) $request->getAttribute('routeParameters'), 'id')
+            ?: Arr::get($request->getQueryParams(), 'id');
         if (!$id) {
             throw new ValidationException(['user' => 'User ID is required.']);
         }

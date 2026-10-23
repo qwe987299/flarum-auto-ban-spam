@@ -19,7 +19,7 @@ qwe987299-auto-ban-spam:
       manual_ban_button: 無限期停權
     modal:
       title: 確認無限期停權
-      body: 確定要對使用者「{username}」執行無限期停權與資料清理嗎？此操作將會依照系統設定之「使用者違規處置方式」處理其過去發佈的所有內容與上傳檔案。
+      body: '確定要對使用者「{username}」執行無限期停權與資料清理嗎？此操作將會依照系統設定之「使用者違規處置方式」處理其過去發佈的所有內容與上傳檔案。'
       confirm_button: 確定執行
       cancel_button: 取消
       success_message: 已成功對該使用者執行無限期停權與資料清理。

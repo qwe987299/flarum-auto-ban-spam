@@ -19,7 +19,7 @@ qwe987299-auto-ban-spam:
       manual_ban_button: Indefinite Ban
     modal:
       title: Confirm Indefinite Ban
-      body: Are you sure you want to trigger indefinite ban and profile cleanup for "{username}"? All past content and uploaded files will be handled according to the configured User Violation Action Strategy.
+      body: 'Are you sure you want to trigger indefinite ban and profile cleanup for "{username}"? All past content and uploaded files will be handled according to the configured User Violation Action Strategy.'
       confirm_button: Confirm Ban
       cancel_button: Cancel
       success_message: Indefinite ban and cleanup executed successfully.
